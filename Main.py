@@ -1,6 +1,7 @@
 import os
 import time
 from automata import Automata,Transicion,Estado
+from gramatica import Gramatica,Produccion
 
 ayuda = """\n
 ----------------------------------------
@@ -66,8 +67,6 @@ def modo1(automata,inicio,fin,terminal):
     validar2 = False
     validar3 = False
 
-    #estados[0] inicio estados[1] final div[1] terminal
-                    
     #recorrido para validar la existencia de los estados
     for valor in automata.estados:
         if inicio.upper() == valor.nombre:
@@ -86,25 +85,24 @@ def modo1(automata,inicio,fin,terminal):
             if valor == terminal.lower():
                 validar3 = True
                                 
-            #validacion del terminal
-            if validar3 == False:
-                print("\nEl terminal no se encuentra en el AFD\n")
-            else:
-                #recorrido para validar que no exista una transicion desde un estado con el mismo terminal 
-                for tran in automata.transiciones:
-                    if tran.valor == terminal and inicio == tran.inicial:
-                        validar = False
-
-        #retorno de la validacion final
-        if validar == True:
-            transicion = Transicion(inicio.upper(),fin.upper(),terminal.lower())
-            automata.transiciones.append(transicion)
-            print("\nSe ha agregado la transicion\n")
+        #validacion del terminal
+        if validar3 == False:
+            print("\nEl terminal no se encuentra en el AFD\n")
         else:
-            print("\nLos estados solo pueden tener una transicion con cada terminal\n")    
+            #recorrido para validar que no exista una transicion desde un estado con el mismo terminal 
+            for tran in automata.transiciones:
+                if tran.valor == terminal and inicio == tran.inicial:
+                    validar = False
 
+            #retorno de la validacion final
+            if validar == True:
+                transicion = Transicion(inicio.upper(),fin.upper(),terminal.lower())
+                automata.transiciones.append(transicion)
+                print("\nSe ha agregado la transicion\n")
+            else:
+                print("\nLos estados solo pueden tener una transicion con cada terminal\n")    
 
-def menuAFD():
+def menuAFD(): 
     #limpiar pantalla
     os.system("cls")
 
@@ -181,7 +179,7 @@ def menuAFD():
                     if validar.nombre.lower() == terminal.lower():
                         aux = False
                 for validar in nuevo_automata.terminales:
-                    if validar == estado.lower():
+                    if validar == terminal.lower():
                         aux = False
 
                 #retorno de la validacion del terminal
@@ -231,9 +229,11 @@ def menuAFD():
                 if modo == "1":
                     #captura de la transicion
                     transicion = input("\nIngrese la transicion: ")
+                    
                     #division en estado inicial, estado final y terminal (EI,EF;T)
                     div = transicion.split(";")
                     estados = div[0].split(",")
+
                     modo1(nuevo_automata,estados[0],estados[1],div[1])
 
                 elif modo == "2":
@@ -291,16 +291,21 @@ def menuAFD():
                         #agregando la nueva fila a la matriz
                         matriz_transiciones.append(temp)
 
-                    for i in range(0,len(matriz_transiciones)):
-                        for j in range(0,len(matriz_transiciones[i])):
-                            print(str(matriz_transiciones[i][j]) + "\t",end=" ")
-                        print("\n") 
+                    #[fila][columna] len(matriz_transiciones) = filas , len(matriz_transiciones[0]) = columnas
+
+                    for i in range(1,len(matriz_transiciones)):
+                        for j in range(1,len(matriz_transiciones[0])):
+                            if matriz_transiciones[i][j] != "":
+                                if matriz_transiciones[i][j] != "-":
+                                    #print("cabecera " +  matriz_transiciones[0][j]+" izquierda "+matriz_transiciones[i][0]+" interior "+ matriz_transiciones[i][j])
+                                    modo1(nuevo_automata,matriz_transiciones[i][0],matriz_transiciones[i][j],matriz_transiciones[0][j])
+                            
+
                 else:
                     print("\nIngrese unicamente el numero 1 o 2\n")
             elif lectura == 6:
                 print(ayuda)
             elif lectura == 0:
-                graphviz(nuevo_automata,nuevo_automata.nombre)
                 menuPrincipal()
             else:
                 print("\nIngrese una opcion valida\n")
@@ -310,6 +315,23 @@ def menuAFD():
 def menuGramatica():
     #limpiar pantalla y mostrar menu
     os.system("cls")
+
+    #captura del nombre que tendra el automata
+    nombre = input("Ingrese un nombre para la gramatica: ")
+    
+    #verificacion del nombre de la gramatica
+    for valor in gramaticas:
+        if valor.nombre == nombre:
+            print("\nEl nombre de la gramatica ya existe, ingrese otro\n")
+            time.sleep(1)
+            menuGramatica()
+
+    #creacion de la gramatica
+    nueva_gramatica = Gramatica(nombre,[],[],"",[])
+    
+    #agregando el automata al arreglo
+    gramaticas.append(nueva_gramatica)
+
     print(" ")
     print("-----------Menu Gramatica------------")
     print("|                                   |")
@@ -330,13 +352,73 @@ def menuGramatica():
         if lectura.isdigit() == True:
             lectura = int(lectura)
             if lectura == 1:
-                pass
+                #captura del no terminal
+                noTerminal = input("\nIngrese el nombre del no terminal: ")
+                
+                #variable para validar la existencia del no terminal
+                validar = False
+
+                #recorrido para validar la existencia del no terminal
+                for valor in nueva_gramatica.no_terminales:
+                    if valor == noTerminal.upper():
+                        validar = True
+                
+                for valor in nueva_gramatica.terminales:
+                    if valor == noTerminal.lower():
+                        validar = True
+                
+                #retorno de la validacion
+                if validar == False:
+                    nueva_gramatica.no_terminales.append(noTerminal.upper())
+                    print("\nSe ha agregado el no terminal a la gramatica\n")
+                else:
+                    print("\nEl valor del no terminal ya se encuentra en la gramatica\n")
             elif lectura == 2:
-                pass
+                #captura del no terminal
+                terminal = input("\nIngrese el nombre del terminal: ")
+                
+                #variable para validar la existencia del no terminal
+                validar = False
+
+                #recorrido para validar la existencia del no terminal
+                for valor in nueva_gramatica.no_terminales:
+                    if valor == terminal.upper():
+                        validar = True
+                
+                for valor in nueva_gramatica.terminales:
+                    if valor == terminal.lower():
+                        validar = True
+                
+                #retorno de la validacion
+                if validar == False:
+                    nueva_gramatica.terminales.append(terminal.lower())
+                    print("\nSe ha agregado el terminal a la gramatica\n")
+                else:
+                    print("\nEl valor del terminal ya se encuentra en la gramatica\n")
             elif lectura == 3:
-                pass
+                #captura del no terminal inicial
+                inicial = input("\nIngrese el valor del no terminal inicial: ")
+
+                #variable para validar la existencia del no terminal
+                validar = False
+
+                #recorrido para validar la existencia del no terminal
+                for valor in nueva_gramatica.no_terminales:
+                    if valor == inicial.upper():
+                        validar = True
+                
+                #retorno de la validacion
+                if validar == True:
+                    nueva_gramatica.no_terminal_inicial = inicial.upper()
+                    print("\nSe ha agregado el no terminal inicial\n")
+                else:
+                    print("\nEl no terminal ingresado no existe en la gramatica\n")
             elif lectura == 4:
                 pass
+                #NT>T NT o NT>NT T
+                #la disyuncion puede ser con NT1>NT2 T|NT3 T  o NT1>NT2 T NT1>NT3 T
+                #separacion del lado derecho es con un espacio 
+                #epsilon viene como palabra
             elif lectura == 5:
                 pass
             elif lectura == 6:
