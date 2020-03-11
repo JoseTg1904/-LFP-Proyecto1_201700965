@@ -1,5 +1,4 @@
 class Automata():
-    
     def __init__(self,nombre,terminales,estados,estado_inicial,transiciones):
         self.nombre = nombre
         self.terminales = terminales

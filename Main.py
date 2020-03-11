@@ -17,6 +17,9 @@ ayuda = """\n
 automatas = []
 gramaticas = []
 
+#valor de la repeticion
+repeticion = 0
+
 #mostrar datos, recibir un enter y enviar al menu principal
 print(" ")
 print("----------Datos del estudiante----------")
@@ -78,7 +81,7 @@ def modo1(automata,inicio,fin,terminal):
 
     #validacion de la existencia de los estados
     if validar1== False or validar2 == False:
-        print("\nLos estados ingresados no se encuentran en el AFD\n")
+        return"\nLos estados ingresados no se encuentran en el AFD\n"
     else:
         #recorrido para validar la existencia del terminal
         for valor in automata.terminales:
@@ -87,7 +90,7 @@ def modo1(automata,inicio,fin,terminal):
                                 
         #validacion del terminal
         if validar3 == False:
-            print("\nEl terminal no se encuentra en el AFD\n")
+            return"\nEl terminal no se encuentra en el AFD\n"
         else:
             #recorrido para validar que no exista una transicion desde un estado con el mismo terminal 
             for tran in automata.transiciones:
@@ -98,9 +101,64 @@ def modo1(automata,inicio,fin,terminal):
             if validar == True:
                 transicion = Transicion(inicio.upper(),fin.upper(),terminal.lower())
                 automata.transiciones.append(transicion)
-                print("\nSe ha agregado la transicion\n")
+                return"\nSe ha agregado la transicion\n"
             else:
-                print("\nLos estados solo pueden tener una transicion con cada terminal\n")    
+                return"\nLos estados solo pueden tener una transicion con cada terminal\n"    
+
+def crearEstado(automata,valor,aceptacion):
+
+    #declaracion de la variable para validar su existencia
+    aux = True
+
+    #verificar si el valor del estado ingresado ya se encuentra en el AFD
+    for validar in automata.estados:
+        if validar.nombre == valor.upper():
+            aux = False
+    for validar in automata.terminales:
+        if validar == valor.lower():
+            aux = False
+
+    #retorno de la verificacion del estado
+    if aux == True:
+        automata.estados.append(Estado(valor.upper(),aceptacion))
+        return"\nSe ha agregrado el estado al AFD\n"
+    else:
+        return"\nEl estado ingresado ya se encuentra en el AFD\n"
+
+def cambiarAceptacion(automata,noTerminal,estado):
+    #variable para verificar si el estado existe
+    aux = False
+
+    #verificar si el estado existe y cambiarlo a estado de aceptacion
+    for valor in automata.estados:
+        if valor.nombre == noTerminal.upper():
+            valor.aceptacion = estado
+            aux = True
+                
+    #retorno de la validacion del estado de aceptacion
+    if aux == True:
+        return"\nSe a establecido el estado de aceptacion\n"
+    else:
+        return"\nEl estado ingresado no se encuentra en el AFD\n"
+
+def crearTerminalAFD(automata,terminal):
+    #declaracion de la variable para validar su existencia
+    aux = True
+
+    #verificar si el nombre del terminal ya se encuentra en el AFD
+    for validar in automata.estados:
+        if validar.nombre.lower() == terminal.lower():
+            aux = False
+    for validar in automata.terminales:
+        if validar == terminal.lower():
+            aux = False
+
+    #retorno de la validacion del terminal
+    if aux == True:
+        automata.terminales.append(terminal.lower())
+        return"\nSe ha agregrado el terminal al AFD\n"
+    else:
+        return"\nEl terminal ingresado ya se encuentra en el AFD\n"
 
 def menuAFD(): 
     #limpiar pantalla
@@ -149,45 +207,14 @@ def menuAFD():
                 #capturar el nombre del estado
                 estado = input("\nIngrese el estado: ")
 
-                #declaracion de la variable para validar su existencia
-                aux = True
-
-                #verificar si el valor del estado ingresado ya se encuentra en el AFD
-                for validar in nuevo_automata.estados:
-                    if validar.nombre == estado.upper():
-                        aux = False
-                for validar in nuevo_automata.terminales:
-                    if validar.upper() == estado.upper():
-                        aux = False
-
-                #retorno de la verificacion del estado
-                if aux == True:
-                    estado = Estado(estado.upper(),"0")
-                    nuevo_automata.estados.append(estado)
-                    print("\nSe ha agregrado el estado al AFD\n")
-                else:
-                    print("\nEl estado ingresado ya se encuentra en el AFD\n")
+                #llamada al metodo para crear un estado
+                print(crearEstado(nuevo_automata,estado,"0"))
             elif lectura == 2:
                 #capturar el nombre del terminal
                 terminal = input("\nIngrese el terminal: ")
 
-                #declaracion de la variable para validar su existencia
-                aux = True
-
-                #verificar si el nombre del terminal ya se encuentra en el AFD
-                for validar in nuevo_automata.estados:
-                    if validar.nombre.lower() == terminal.lower():
-                        aux = False
-                for validar in nuevo_automata.terminales:
-                    if validar == terminal.lower():
-                        aux = False
-
-                #retorno de la validacion del terminal
-                if aux == True:
-                    nuevo_automata.terminales.append(terminal.lower())
-                    print("\nSe ha agregrado el terminal al AFD\n")
-                else:
-                    print("\nEl terminal ingresado ya se encuentra en el AFD\n")
+                #llamada al metodo para crear terminales
+                print(crearTerminalAFD(nuevo_automata,terminal))
             elif lectura == 3:
                 #capturar el estado inicial
                 inicial = input("\nIngrese el estado inicial: ")
@@ -210,20 +237,8 @@ def menuAFD():
                 #capturar el estado de aceptacion
                 aceptacion = input("\nIngrese el estado de aceptacion: ")
 
-                #variable para verificar si el estado existe
-                aux = False
-
-                #verificar si el estado existe y cambiarlo a estado de aceptacion
-                for valor in nuevo_automata.estados:
-                    if valor.nombre == aceptacion.upper():
-                        valor.aceptacion = "1"
-                        aux = True
-                
-                #retorno de la validacion del estado de aceptacion
-                if aux == True:
-                    print("\nSe a establecido el estado de aceptacion\n")
-                else:
-                    print("\nEl estado ingresado no se encuentra en el AFD\n")
+                #llamada del metodo para cambiar la aceptacion del estado
+                print(cambiarAceptacion(nuevo_automata,aceptacion,"1"))
             elif lectura == 5:
                 modo = input("\nSeleccione el numero del modo 1 o 2: ")
                 if modo == "1":
@@ -235,7 +250,6 @@ def menuAFD():
                     estados = div[0].split(",")
 
                     modo1(nuevo_automata,estados[0],estados[1],div[1])
-
                 elif modo == "2":
                     #declaracion de la matriz que almacenara la tabla de transiciones
                     matriz_transiciones = []
@@ -299,8 +313,6 @@ def menuAFD():
                                 if matriz_transiciones[i][j] != "-":
                                     #print("cabecera " +  matriz_transiciones[0][j]+" izquierda "+matriz_transiciones[i][0]+" interior "+ matriz_transiciones[i][j])
                                     modo1(nuevo_automata,matriz_transiciones[i][0],matriz_transiciones[i][j],matriz_transiciones[0][j])
-                            
-
                 else:
                     print("\nIngrese unicamente el numero 1 o 2\n")
             elif lectura == 6:
@@ -465,7 +477,7 @@ def menuEvaluarCadenas():
         else:
             print("\nIngrese una opcion valida \n")
 
-def menuArchivos():
+def menuArchivos(repeticion):
     #limpiar pantalla y mostrar menu
     os.system("cls")
     print(" ")
@@ -486,11 +498,146 @@ def menuArchivos():
         if lectura.isdigit() == True:
             lectura = int(lectura)
             if lectura == 1:
-                pass
+                #capturando la ruta del archivo
+                path_inicial = input("Ingrese la direccion del archivo .afd: ")
+                
+                #validando que la extension del archivo sea la correcta
+                while True:
+                    ruta,nombre = os.path.split(path_inicial)
+                    division = nombre.split(".")
+                    if division[1] == "afd":
+                        break
+                    else:
+                        path_inicial = input ("\nIngrese la ruta del archivo .afd: ")
+
+                #verificacion del nombre del automata
+                for valor in automatas:
+                    if valor.nombre == division[0]:
+                        division[0] = division[0]+"-copia("+repeticion+")"
+                        repeticion = repeticion + 1
+                
+                #creacion del automata
+                nuevo_automata = Automata(division[0],[],[],"",[])
+    
+                #agregando el automata al arreglo
+                automatas.append(nuevo_automata)
+
+                #abriendo el archivo y obteniendo su contenido
+                archivo_afd = open(path_inicial,"r")
+                contenido = archivo_afd.read()
+
+                #recorrido del archivo .afd
+                for linea in contenido.split("\n"):
+
+                    #division de la linea en EI,EF,Terminal;aceptacionEI,aceptacionEF
+                    valor = linea.split(";")
+                    transicion = valor[0].split(",")
+                    aceptacion = valor[1].split(",")
+
+                    #validar si el estado inicial ya se encuentra con un valor 
+                    if nuevo_automata.estado_inicial == "":
+                        nuevo_automata.estado_inicial = transicion[0].upper()
+                    
+                    #validar existencia del estado creandolo de ser necesario o cambiarle su estado de aceptacion
+                    if aceptacion[0].lower() == "true": 
+                        validar = crearEstado(nuevo_automata,transicion[0].upper(),"1")
+                        if validar == "\nSe ha agregrado el estado al AFD\n":
+                            pass
+                        else:
+                            cambiarAceptacion(nuevo_automata,transicion[0].upper(),"1")
+                    else:
+                        validar = crearEstado(nuevo_automata,transicion[0].upper(),"0")
+                        if validar == "\nSe ha agregrado el estado al AFD\n":
+                            pass
+                        else:
+                            cambiarAceptacion(nuevo_automata,transicion[0].upper(),"0")
+                    
+                    if aceptacion[1].lower() == "true": 
+                        validar = crearEstado(nuevo_automata,transicion[1].upper(),"1")
+                        if validar == "\nSe ha agregrado el estado al AFD\n":
+                            pass
+                        else:
+                            cambiarAceptacion(nuevo_automata,transicion[1].upper(),"1")
+                    else:
+                        validar = crearEstado(nuevo_automata,transicion[1].upper(),"0")
+                        if validar == "\nSe ha agregrado el estado al AFD\n":
+                            pass
+                        else: 
+                            cambiarAceptacion(nuevo_automata,transicion[0].upper(),"0")
+
+                    #agregando el terminal al automata
+                    crearTerminalAFD(nuevo_automata,transicion[2].lower())
+
+                    #creando la transicion y agregandola al terminal
+                    modo1(nuevo_automata,transicion[0].upper(),transicion[1].upper(),transicion[2].upper())
+                graphviz(nuevo_automata,division[0])
             elif lectura == 2:
                 pass
             elif lectura == 3:
-                pass
+                #mostrando los nombres de los AFD disponibles
+                print("\nGramaticas disponibles: ",end="\n  ")
+                for it in range(0,len(automatas)):
+                   print(str(it)+ ". "+ automatas[it].nombre,end="\n  ")
+                
+                #capturando el nombre del automata a guardar
+                nombre = input("\nIngrese el nombre del automata a guardar: ")
+
+                automata = None
+
+                for valor in automatas:
+                    if valor.nombre == nombre:
+                        automata = valor
+
+                transicionInicial = ""
+
+                for transi in automata.transiciones:
+                    if transi.inicial == automata.estado_inicial:
+                        transicionInicial = transi.inicial+","+transi.final+","+transi.valor+";"
+                        break
+
+                for estado in automata.estados:
+                    if transi.inicial == estado.nombre:
+                        if estado.aceptacion == "1":
+                            transicionInicial = transicionInicial+"true"+","
+                            break
+                        else:
+                            transicionInicial = transicionInicial+"false"+","
+                            break
+                
+                for estado in automata.estados:
+                    if transi.final == estado.nombre:
+                        if estado.aceptacion == "1":
+                            transicionInicial = transicionInicial+"true\n"
+                            break
+                        else:
+                            transicionInicial = transicionInicial+"false\n"
+                            break
+
+                path_afd = "C:\\Users\\chepe\\Desktop\\"+ automata.nombre +".afd"
+                archivo_afd = open(path_afd,"w")
+
+                validar = transi.inicial+","+transi.final+","+transi.valor
+
+                for tran in automata.transiciones:
+                    actual = tran.inicial+","+tran.final+","+tran.valor
+                    if validar != actual:
+                        transicionInicial = transicionInicial + tran.inicial+","+tran.final+","+tran.valor+";"
+
+                        for estado in automata.estados:
+                            if tran.inicial == estado.nombre:
+                                if estado.aceptacion == "1":
+                                    transicionInicial = transicionInicial+"true"+","
+                                else:
+                                    transicionInicial = transicionInicial+"false"+","
+                
+                        for estado in automata.estados:
+                            if tran.final == estado.nombre:
+                                if estado.aceptacion == "1":
+                                    transicionInicial = transicionInicial+"true\n"
+                                else:
+                                    transicionInicial = transicionInicial+"false\n"
+                archivo_afd.write(transicionInicial.rstrip("\n"))
+                archivo_afd.close()
             elif lectura == 4:
                 pass
             elif lectura == 0:
@@ -562,7 +709,7 @@ def menuPrincipal():
             elif lectura == 4:
                 menuReportes()
             elif lectura == 5:
-                menuArchivos()
+                menuArchivos(repeticion)
             elif lectura == 0:
                 print("\nHasta la proxima c:\n")
                 exit(0)
