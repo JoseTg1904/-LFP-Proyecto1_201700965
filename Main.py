@@ -1,7 +1,7 @@
 import os
 import time
 from automata import Automata,Transicion,Estado
-from gramatica import Gramatica,Produccion
+from gramatica import Gramatica,Produccion,LadoDerecho
 
 ayuda = """\n
 ----------------------------------------
@@ -32,6 +32,338 @@ print("----------------------------------------")
 print(" ")
 input("Presione enter para continuar")
 
+def removerRecursividad(gramatica,inicial,final,siguiente):
+    nuevoNoTerminal = inicial+"_P"
+    aux = False
+
+    for produccion in gramatica.producciones:
+        if produccion.inicio == nuevoNoTerminal:
+            aux = True 
+            break
+
+    if aux == False:
+        prod = Produccion(nuevoNoTerminal,[LadoDerecho(siguiente,nuevoNoTerminal),LadoDerecho("epsilon","epsilon")],"1")
+        gramatica.producciones.append(prod)
+        gramatica.transformacion.append(Produccion(inicial,[LadoDerecho(inicial,siguiente)],"0"))
+        for valor in gramatica.producciones:
+            if valor.inicio == inicial:
+                gramatica.transformacion.append(valor)
+        for valor in gramatica.producciones:
+            if valor.inicio == inicial:
+                for derecha in valor.ladoDerecho:
+                    derecha.siguiente = nuevoNoTerminal
+                break
+    else:
+        aux = False
+        for valor in produccion.ladoDerecho:
+            if valor.terminal == siguiente:
+                aux = True
+                break
+        if aux == False:
+            produccion.ladoDerecho.append(LadoDerecho(siguiente,nuevoNoTerminal))
+            for valor in gramatica.transformacion:
+                if valor.inicio == inicial:
+                    valor.ladoDerecho.append(LadoDerecho(inicial,siguiente))
+                    break
+        else:
+            print("\nLa produccion ya se encuentra en la gramatica\n")
+    """
+    A -> A b
+        | c
+        | d
+    
+    quitando recursividad:
+
+    A -> c A_P
+        |d A_P
+    A_P -> b A_P
+          | epsilon
+
+    """
+
+def crearTerminalGramatica(gramatica,terminal):
+    #variable para validar la existencia del no terminal
+    validar = False
+
+    #recorrido para validar la existencia del no terminal
+    for valor in gramatica.no_terminales:
+        if valor == terminal.upper():
+            validar = True
+                
+    for valor in gramatica.terminales:
+        if valor == terminal.lower():
+            validar = True
+                
+    #retorno de la validacion
+    if validar == False:
+        gramatica.terminales.append(terminal.lower())
+        return"\nSe ha agregado el terminal a la gramatica\n"
+    else:
+        return"\nEl valor del terminal ya se encuentra en la gramatica\n"
+
+def crearNoTerminalGramatica(gramatica,noTerminal):
+    #variable para validar la existencia del no terminal
+    validar = False
+
+    #recorrido para validar la existencia del no terminal
+    for valor in gramatica.no_terminales:
+        if valor == noTerminal.upper():
+            validar = True
+                
+    for valor in gramatica.terminales:
+        if valor == noTerminal.lower():
+            validar = True
+                
+    #retorno de la validacion
+    if validar == False:
+        gramatica.no_terminales.append(noTerminal.upper())
+        return"\nSe ha agregado el no terminal a la gramatica\n"
+    else:
+        return"\nEl valor del no terminal ya se encuentra en la gramatica\n"
+
+def crearProduccion(gramatica,produccion):
+    #separacion de la produccion 
+    valor = produccion.split(">")
+                
+    #variable para validar la existencia del no terminal
+    aux = False
+
+    #validando existencia del no terminal inicial
+    for noTerminal in gramatica.no_terminales:
+        if valor[0].upper() == noTerminal:
+            aux = True
+
+    if aux == True:
+        #revisar que el valor producido sea o no epsilon
+        if valor[1].lower() == "epsilon":
+                       
+            aux = False
+            #verificando que la produccion no este ya en la gramatica
+            for veri in gramatica.producciones:
+                if veri.inicio == valor[0].upper():
+                    for derecho in veri.ladoDerecho:
+                        if derecho.terminal == "epsilon": 
+                            aux = True
+                            break
+
+            if aux == True:
+                return"\nLa produccion ya se encuentra en la gramatica\n"
+            else:
+                aux = False
+                aux1 = False
+                            
+                #verificando si ya existe una produccion con el no terminal inicial
+                for produccion in gramatica.producciones:
+                    if produccion.inicio == valor[0].upper():
+                        aux = True
+                        break
+                for trans in gramatica.transformacion:
+                    if trans.inicio == valor[0].upper():
+                        aux1 = True
+                        break
+                            
+                if aux1 == True:
+                    trans.ladoDerecho.append(LadoDerecho("epsilon","epsilon"))
+                else:
+                    gramatica.transformacion.append(Produccion(valor[0].upper(),[LadoDerecho("epsilon","epsilon")],"0"))
+                if aux == True:
+                    produccion.ladoDerecho.append(LadoDerecho("epsilon","epsilon"))
+                else:
+                    gramatica.producciones.append(Produccion(valor[0].upper(),[LadoDerecho("epsilon","epsilon")],"0"))
+                    return"\nLa produccion se ha agregado a la gramatica\n"
+        else:
+            aux = False
+
+            #dividiendo el lado derecho de la produccion
+            derecho = valor[1].split(" ")
+
+            #verificando si existe recursividad por la izquierda
+            for noTerminal in gramatica.no_terminales:
+                if noTerminal == derecho[0].upper():
+                    aux = True
+                    break
+
+            if aux == True and len(derecho)>1:
+                            
+                aux = False
+
+                #verificando que el terminal exista en la gramatica
+                for terminal in gramatica.terminales:
+                    if terminal == derecho[1].lower():
+                        aux = True
+                        break
+                        
+                if aux == True:
+                    removerRecursividad(gramatica,valor[0].upper(),"no",derecho[1].lower())
+                else:
+                    return"\nEl terminal no se encuentra en la gramatica\n"
+            else:
+                            
+                aux = False
+
+                if len(derecho) == 1:
+                    aux = False
+
+                    #verificando la existencia del terminal en la gramatica
+                    for terminal in gramatica.terminales:
+                        if terminal == derecho[0].lower():
+                            aux = True
+                            break
+
+                    if aux == True:
+                                    
+                        aux = False
+
+                        #verificando que exista una produccion con el no terminal inicial
+                        for produccion in gramatica.producciones:
+                            if produccion.inicio == valor[0].upper():
+                                aux = True
+                                break
+                        for tran in gramatica.transformacion:
+                            if tran.inicio == valor[0].upper():
+                                break
+
+                        #Si existe una produccion verificar si la que existe es recursiva por la izquierda
+                        if aux == True:
+                            aux = False
+                            nuevoNoTerminal = valor[0].upper()+"_P"
+                                        
+                            #verificando si existe una produccion recursiva asociada
+                            for prod in gramatica.producciones:
+                                if prod.inicio == nuevoNoTerminal:
+                                    aux = True
+                                    break
+                                    
+                            if aux == True:
+                                aux = False
+
+                                #verificando si ya esta la produccion en la gramatica
+                                for val in produccion.ladoDerecho:
+                                    if val.terminal ==  derecho[0].lower() and val.siguiente == nuevoNoTerminal:
+                                        aux = True
+                                        break
+
+                                if aux == False:
+                                    produccion.ladoDerecho.append(LadoDerecho(derecho[0].lower(),nuevoNoTerminal))
+                                    produccion.recursividad = "1"
+                                    tran.ladoDerecho.append(LadoDerecho(derecho[0].lower(),"no"))
+                                else:
+                                    return"\nLa produccion ya se encuentra en la gramatica\n"
+                            else:
+                                aux = False
+
+                                #verificando si la produccion ya esta en la gramatica
+                                for val in produccion.ladoDerecho:
+                                    if val.terminal ==  derecho[0].lower() and val.siguiente == "no":
+                                        aux = True
+                                        break
+
+                                if aux == False:
+                                    produccion.ladoDerecho.append(LadoDerecho(derecho[0].lower(),"no"))
+                                    tran.ladoDerecho.append(LadoDerecho(derecho[0].lower(),"no"))
+                                else:
+                                    return"\nLa produccion ya se encuentra en la gramatica\n"
+                        else:
+                            aux = False
+                            nuevoNoTerminal = valor[0].upper()+"_P"
+                                        
+                            #verificando si existe una produccion recursiva asociada
+                            for prod in gramatica.producciones:
+                                if prod.inicio == nuevoNoTerminal:
+                                    aux = True
+                                    break
+
+                            if aux == True:
+                                gramatica.producciones.append(Produccion(valor[0].upper(),[LadoDerecho(derecho[0].lower(),nuevoNoTerminal)],"1"))
+                                tran.ladoDerecho.append(LadoDerecho(derecho[0].lower(),"no"))
+                            else:
+                                gramatica.producciones.append(Produccion(valor[0].upper(),[LadoDerecho(derecho[0].lower(),"no")],"0"))
+                                gramatica.transformacion.append(Produccion(valor[0].upper(),[LadoDerecho(derecho[0].lower(),"no")],"0"))
+                    else:
+                        return"\nEl terminal no existe en la gramatica\n"
+                else:
+                    aux = False
+
+                    #verificando la existencia del no terminal en la gramatica
+                    for noTerminal in gramatica.no_terminales:
+                        if noTerminal == derecho[1].upper():
+                            aux = True
+                            break
+
+                    if aux == True:
+
+                        aux = False
+
+                        #verificando la existencia del terminal en la gramatica
+                        for termi in gramatica.terminales:
+                            if termi == derecho[0].lower():
+                                aux = True
+                                break
+
+                        if aux == True:
+                            aux = False
+                            
+                            #verificando que no se repita la produccion
+                            for produccion in gramatica.producciones:
+                                if produccion.inicio == valor[0].upper():
+                                    for val in produccion.ladoDerecho:
+                                        if val.terminal == derecho[0].lower() and val.siguiente == derecho[1].upper():
+                                            aux = True
+                                            break
+                                        
+                            if aux == True:
+                                return"\nLa produccion ya se encuentra en la gramatica\n"
+                            else:
+                                aux = False
+                                
+                                #verificando si existe una produccion con el no terminal inicial
+                                for produccion in gramatica.producciones:
+                                    if produccion.inicio == valor[0].upper():
+                                                    
+                                        #agregando el lado derecho a la produccion existente
+                                        produccion.ladoDerecho.append(LadoDerecho(derecho[0].lower(),derecho[1].upper()))
+                                        aux = True
+                                        break
+                                            
+                                for tran in gramatica.transformacion:
+                                    if tran.inicio == valor[0].upper():
+                                        tran.ladoDerecho.append(LadoDerecho(derecho[0].lower(),derecho[1].upper()))
+                                        break
+
+                                if aux == True:
+                                    return"\nSe ha agregado la produccion a la gramatica\n"
+                                else:
+                                    gramatica.producciones.append(Produccion(valor[0].upper(),[LadoDerecho(derecho[0].lower(),derecho[1].upper())],"0"))
+                                    gramatica.transformacion.append(Produccion(valor[0].upper(),[LadoDerecho(derecho[0].lower(),derecho[1].upper())],"0"))
+                                    return"\nSe ha agregado la produccion a la gramatica\n"                                   
+                        else:
+                            return"\nEl terminal ingresado no existe en la gramatica\n"
+                    else:
+                        return"\nEl no terminal ingresado no existe en la gramatica\n"
+    else:
+        return"\nEl no terminal inicial no exite en la gramatica\n"
+
+def traduccionHaciaGramatica(automata):
+    aux = True
+
+    #creando el nombre que tendra la gramatica asociada
+    nombre = automata.nombre+"_Gramatica"
+
+    #verificando que el automata no tenga una gramatica asociada
+    for valor in gramaticas:
+        if valor.nombre == nombre:
+            aux = False
+
+    if aux == True:
+        #los terminales son los mismos pero los objetos de las producciones son distintos de los estados
+        nueva_gramatica = Gramatica(nombre,automata.terminales,[],automata.estado_inicial,[],[])
+        #aqui va a empezar la tranduccion a gramatica
+        pass
+    else:
+        return
+
+def traduccionHaciaAutomata(gramatica):
+    pass
 
 def graphviz(afd,nombre):
     #inicio 
@@ -339,7 +671,7 @@ def menuGramatica():
             menuGramatica()
 
     #creacion de la gramatica
-    nueva_gramatica = Gramatica(nombre,[],[],"",[])
+    nueva_gramatica = Gramatica(nombre,[],[],"",[],[])
     
     #agregando el automata al arreglo
     gramaticas.append(nueva_gramatica)
@@ -362,51 +694,26 @@ def menuGramatica():
     while True:
         lectura = input('Presione el numero de la accion a realizar: ')
         if lectura.isdigit() == True:
+            """
+            for prod in nueva_gramatica.producciones:
+                print(prod.inicio+" -> ",end="  ")
+                for derecho in prod.ladoDerecho:
+                    print(derecho.terminal+" "+derecho.siguiente,end="      \n      ")
+                print("\n")
+            """
             lectura = int(lectura)
             if lectura == 1:
                 #captura del no terminal
                 noTerminal = input("\nIngrese el nombre del no terminal: ")
-                
-                #variable para validar la existencia del no terminal
-                validar = False
 
-                #recorrido para validar la existencia del no terminal
-                for valor in nueva_gramatica.no_terminales:
-                    if valor == noTerminal.upper():
-                        validar = True
-                
-                for valor in nueva_gramatica.terminales:
-                    if valor == noTerminal.lower():
-                        validar = True
-                
-                #retorno de la validacion
-                if validar == False:
-                    nueva_gramatica.no_terminales.append(noTerminal.upper())
-                    print("\nSe ha agregado el no terminal a la gramatica\n")
-                else:
-                    print("\nEl valor del no terminal ya se encuentra en la gramatica\n")
+                #invocando al metodo para la creacion del no terminal
+                print(crearNoTerminalGramatica(nueva_gramatica,noTerminal))
             elif lectura == 2:
                 #captura del no terminal
                 terminal = input("\nIngrese el nombre del terminal: ")
                 
-                #variable para validar la existencia del no terminal
-                validar = False
-
-                #recorrido para validar la existencia del no terminal
-                for valor in nueva_gramatica.no_terminales:
-                    if valor == terminal.upper():
-                        validar = True
-                
-                for valor in nueva_gramatica.terminales:
-                    if valor == terminal.lower():
-                        validar = True
-                
-                #retorno de la validacion
-                if validar == False:
-                    nueva_gramatica.terminales.append(terminal.lower())
-                    print("\nSe ha agregado el terminal a la gramatica\n")
-                else:
-                    print("\nEl valor del terminal ya se encuentra en la gramatica\n")
+                #llamando al metodo para crear el terminal
+                print(crearTerminalGramatica(nueva_gramatica,terminal))
             elif lectura == 3:
                 #captura del no terminal inicial
                 inicial = input("\nIngrese el valor del no terminal inicial: ")
@@ -426,13 +733,45 @@ def menuGramatica():
                 else:
                     print("\nEl no terminal ingresado no existe en la gramatica\n")
             elif lectura == 4:
-                pass
-                #NT>T NT o NT>NT T
-                #la disyuncion puede ser con NT1>NT2 T|NT3 T  o NT1>NT2 T NT1>NT3 T
-                #separacion del lado derecho es con un espacio 
-                #epsilon viene como palabra
+                #captura de la produccion
+                produccion = input("\nIngrese la produccion: ")
+                
+                crearProduccion(nueva_gramatica,produccion)
             elif lectura == 5:
-                pass
+                aux = False
+                for valor in nueva_gramatica.producciones:
+                    if valor.recursividad=="1":
+                        aux = True
+
+                if aux == True:
+                    print("\nGramatica sin transformar:\n")
+                    for valor in nueva_gramatica.transformacion:
+                        print(valor.inicio+" ->",end=" ")
+                        for derecha in valor.ladoDerecho:
+                            if derecha.siguiente!="no" and derecha.siguiente!="epsilon": 
+                                print(derecha.terminal+" "+derecha.siguiente,end="\n     ")
+                            else:
+                                print(derecha.terminal,end="\n     ")
+                        print("\n")
+                    print("\nGramatica transformada:\n")
+                    for valor in nueva_gramatica.producciones:
+                        print(valor.inicio+" ->",end=" ")
+
+                        for derecha in valor.ladoDerecho:
+                            if len(valor.inicio) >= 3: 
+                                if derecha.siguiente!="no" and derecha.siguiente!="epsilon": 
+                                    print(derecha.terminal+" "+derecha.siguiente,end="\n       ")
+                                else:
+                                    print(derecha.terminal,end="\n       ")
+                            else:
+                                if derecha.siguiente!="no" and derecha.siguiente!="epsilon": 
+                                    print(derecha.terminal+" "+derecha.siguiente,end="\n     ")
+                                else:
+                                    print(derecha.terminal,end="\n     ")
+
+                        print("\n")
+                else:
+                    print("\nNo hay recursividad\n")
             elif lectura == 6:
                 print(ayuda)
             elif lectura == 0:
@@ -572,10 +911,67 @@ def menuArchivos(repeticion):
                     modo1(nuevo_automata,transicion[0].upper(),transicion[1].upper(),transicion[2].upper())
                 graphviz(nuevo_automata,division[0])
             elif lectura == 2:
-                pass
+                
+                #capturando la ruta del archivo
+                path_inicial = input("Ingrese la ruta del archivo .grm: ")
+
+                #validando que la extension del archivo sea la correcta
+                while True:
+                    ruta,nombre = os.path.split(path_inicial)
+                    division = nombre.split(".")
+                    if division[1] == "grm":
+                        break
+                    else:
+                        path_inicial = input ("\nIngrese la ruta del archivo .grm: ")
+                
+                #verificacion del nombre del automata
+                for valor in automatas:
+                    if valor.nombre == division[0]:
+                        division[0] = division[0]+"-copia("+repeticion+")"
+                        repeticion = repeticion + 1
+                
+                #creando la gramatica
+                nueva_gramatica = Gramatica(division[0],[],[],"",[],[])
+
+                #agregando la gramatica al arreglo 
+                gramaticas.append(nueva_gramatica)
+
+                #abriendo el archivo y obteniendo su contenido
+                archivo_gramatica = open(path_inicial,"r")
+                contenido = archivo_gramatica.read()
+                
+                #leyendo el contenido del archivo
+                for linea in contenido.split("\n"):
+
+                    #dividiendo la produccion en parte izquierda y derecha
+                    produccion = linea.split(">")
+
+                    #creando los no terminales y terminales de la gramatica
+                    crearNoTerminalGramatica(nueva_gramatica,produccion[0])
+                    
+                    derecha = produccion[1].split(" ")
+                    if len(derecha) == 1:
+                        if derecha[0] == "epsilon":
+                            pass
+                        else:
+                            crearTerminalGramatica(nueva_gramatica,derecha[0])
+                    else:
+                        if derecha[0].lower() == True:
+                            crearTerminalGramatica(nueva_gramatica,derecha[0])
+                            crearNoTerminalGramatica(nueva_gramatica,derecha[1])
+                        elif derecha[1].lower() == True:
+                            crearTerminalGramatica(nueva_gramatica,derecha[1])
+                            crearNoTerminalGramatica(nueva_gramatica,derecha[0])
+                    
+                    #agregando la produccion inicial
+                    if nueva_gramatica.no_terminal_inicial == "":
+                        nueva_gramatica.no_terminal_inicial = produccion[0].upper()
+
+                    #creando la produccion
+                    crearProduccion(nueva_gramatica,linea)
             elif lectura == 3:
                 #mostrando los nombres de los AFD disponibles
-                print("\nGramaticas disponibles: ",end="\n  ")
+                print("\nAutomatas disponibles: ",end="\n  ")
                 for it in range(0,len(automatas)):
                    print(str(it)+ ". "+ automatas[it].nombre,end="\n  ")
                 
@@ -639,7 +1035,49 @@ def menuArchivos(repeticion):
                 archivo_afd.write(transicionInicial.rstrip("\n"))
                 archivo_afd.close()
             elif lectura == 4:
-                pass
+                #mostrando los nombres de las gramaticas disponibles
+                print("\nGramaticas disponibles: ",end="\n  ")
+                for it in range(0,len(gramaticas)):
+                   print(str(it)+ ". "+ gramaticas[it].nombre,end="\n  ")
+                
+                #capturando el nombre de la gramatica a guardar
+                nombre = input("\nIngrese el nombre del automata a guardar: ")
+
+                gramatica = None
+
+                for valor in gramaticas:
+                    if valor.nombre == nombre:
+                        gramatica = valor
+
+                contenido = ""
+
+                for valor in gramatica.producciones:
+                    if valor.inicio == gramatica.no_terminal_inicial:
+                        for derecha in valor.ladoDerecho:
+                            if contenido == "":
+                                if derecha.siguiente != "epsilon" and derecha.siguiente!="no":
+                                    contenido = valor.inicio+">"+derecha.terminal+" "+derecha.siguiente+"\n"
+                                else:
+                                    contenido = valor.inicio+">"+derecha.terminal+"\n"
+                            else:
+                                if derecha.siguiente != "epsilon" and derecha.siguiente!="no":
+                                    contenido = contenido+valor.inicio+">"+derecha.terminal+" "+derecha.siguiente+"\n"
+                                else:
+                                    contenido = contenido+valor.inicio+">"+derecha.terminal+"\n"
+                        break
+
+                for valor in gramatica.producciones:
+                    if valor.inicio!=gramatica.no_terminal_inicial:
+                        for derecha in valor.ladoDerecho:
+                            if derecha.siguiente!="epsilon" and derecha.siguiente!="no":
+                                contenido = contenido+valor.inicio+">"+derecha.terminal+" "+derecha.siguiente+"\n"
+                            else:
+                                contenido = contenido+valor.inicio+">"+derecha.terminal+"\n"
+
+                path_gramatica = "C:\\Users\\chepe\\Desktop\\"+ gramatica.nombre +".grm"
+                archivo_gramatica = open(path_gramatica,"w")
+                archivo_gramatica.write(contenido.rstrip("\n"))
+                archivo_gramatica.close()
             elif lectura == 0:
                 menuPrincipal()
             else:
@@ -694,7 +1132,6 @@ def menuPrincipal():
     print("|                              |")
     print("--------------------------------")
     print(" ")
-
     #lectura del teclado para direccionar a otro menu
     while True:
         lectura = input('Presione el numero de la accion a realizar: ')
