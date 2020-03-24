@@ -344,27 +344,110 @@ def crearProduccion(gramatica,produccion):
         return"\nEl no terminal inicial no exite en la gramatica\n"
 
 def traduccionHaciaGramatica(automata):
-    aux = True
+    #creando el nombre de la gramatica traducida
+    nombre = automata.nombre+"_GramaticaTraducida"
 
-    #creando el nombre que tendra la gramatica asociada
-    nombre = automata.nombre+"_Gramatica"
+    #obteniendo los no terminales
+    noTerminales = []
+    for valor in automata.estados:
+        noTerminales.append(valor.nombre)
 
-    #verificando que el automata no tenga una gramatica asociada
-    for valor in gramaticas:
-        if valor.nombre == nombre:
-            aux = False
+    #creando el objeto gramatica
+    nueva_gramatica = Gramatica(nombre,automata.terminales,noTerminales,automata.estado_inicial,[],[])
 
-    if aux == True:
-        #los terminales son los mismos pero los objetos de las producciones son distintos de los estados
-        nueva_gramatica = Gramatica(nombre,automata.terminales,[],automata.estado_inicial,[],[])
-        #aqui va a empezar la tranduccion a gramatica
-        pass
-    else:
-        return
+    #transformando las transiciones en producciones
+    for transicion in automata.transiciones:
+        #NT>T NT(Gramatica) ; de NT1 a NT2 con T (AFD) 
+        
+        aux = False
+
+        for producciones in nueva_gramatica.producciones:
+            if producciones.inicio == transicion.inicial:
+                aux = True
+                break
+        
+        if aux == True:
+            producciones.ladoDerecho.append(LadoDerecho(transicion.valor,transicion.siguiente))
+        else:
+            nueva_gramatica.producciones.append(Produccion(transicion.inicial,[LadoDerecho(transicion.valor,transicion.final)],"0"))
+    
+    #transformando el estado de aceptacion en una produccion que deriva en epsilon
+    for estado in automata.estados:
+        if estado.aceptacion == "1":
+            for producciones in nueva_gramatica.producciones:
+                if producciones.inicio == estado.nombre:
+                    break
+        
+            producciones.LadoDerecho.append(LadoDerecho("epsilon","epsilon"))
+
+    #validando si ya se realizo la traduccion    
+    aux = False
+
+    for it in range(0,len(gramaticas)):
+        if gramaticas[it].nombre == nombre:
+            gramaticas[it] = nueva_gramatica
+            aux = True
+            break 
+    
+    if aux == False:
+        gramaticas.append(nueva_gramatica)
 
 def traduccionHaciaAutomata(gramatica):
-    pass
+    #creando el nombre del nuevo automata
+    nombre = gramatica.nombre+"_AutomataTraducido"
 
+    #convirtiendo los no terminales a estados
+    estados = []
+    for noTerminal in gramatica.no_terminales:
+        estados.append(Estado(noTerminal,"0"))
+
+    #creando el objeto AFD
+    nuevo_automata = Automata(nombre,gramatica.terminales,estados,gramatica.no_terminal_inicial,[])
+   
+
+    #variable para validar la creacion de un estado sumidero
+    iterador = 0
+
+    #transformando las producciones que sean disntinas de epsilon y un solo terminal a transiciones
+    for producciones in gramatica.producciones:
+        for derecha in producciones.ladoDerecho:
+            if derecha.siguiente != "no" and derecha.siguiente != "epsilon":
+                nuevo_automata.transiciones.append(Transicion(producciones.inicio,derecha.siguiente,derecha.terminal))
+            else:
+                if derecha.siguiente=="no":
+                    iterador = iterador + 1
+    
+    #verificando la existencia del estado sumidero y creandolo de ser necesario
+    if iterador > 0:
+        nuevo_automata.estados.append(Estado("Sumidero","1"))
+    
+    #transformando las producciones que sean de un solo terminal a transiciones hacia el estado sumidero
+    for producciones in gramatica.producciones:
+        for derecha in producciones.ladoDerecho:
+            if derecha.siguiente == "no":
+                nuevo_automata.transiciones.append(Transicion(producciones.inicio,"Sumidero",derecha.terminal))
+    
+    #transformando las producciones que sean epsilon a estados de aceptacion
+    for producciones in gramatica.producciones:
+        for derecha in producciones.ladoDerecho:
+            if derecha.siguiente == "epsilon":
+                for estado in nuevo_automata.estados:
+                    if estado.nombre == producciones.inicio:
+                        estado.aceptacion = "1"
+                        break
+    
+    #validando si ya se realizo la traduccion    
+    aux = False
+
+    for it in range(0,len(automatas)):
+        if automatas[it].nombre == nombre:
+            automatas[it] = nuevo_automata
+            aux = True
+            break 
+    
+    if aux == False:
+        automatas.append(nuevo_automata)
+    
 def graphviz(afd,nombre):
     #inicio 
     dot = "digraph G{\nrankdir=LR\n"
@@ -492,25 +575,9 @@ def crearTerminalAFD(automata,terminal):
     else:
         return"\nEl terminal ingresado ya se encuentra en el AFD\n"
 
-def menuAFD(): 
+def menuAFD(nuevo_automata): 
     #limpiar pantalla
     os.system("cls")
-
-    #captura del nombre que tendra el automata
-    nombre = input("Ingrese un nombre para el AFD: ")
-    
-    #verificacion del nombre del automata
-    for valor in automatas:
-        if valor.nombre == nombre:
-            print("\nEl nombre del AFD ya existe, ingrese otro\n")
-            time.sleep(1)
-            menuAFD()
-
-    #creacion del automata
-    nuevo_automata = Automata(nombre,[],[],"",[])
-    
-    #agregando el automata al arreglo
-    automatas.append(nuevo_automata)
 
     #impresion del menu
     print(" ")
@@ -656,25 +723,9 @@ def menuAFD():
         else:
             print("\nIngrese una opcion valida \n")
 
-def menuGramatica():
+def menuGramatica(nueva_gramatica):
     #limpiar pantalla y mostrar menu
     os.system("cls")
-
-    #captura del nombre que tendra el automata
-    nombre = input("Ingrese un nombre para la gramatica: ")
-    
-    #verificacion del nombre de la gramatica
-    for valor in gramaticas:
-        if valor.nombre == nombre:
-            print("\nEl nombre de la gramatica ya existe, ingrese otro\n")
-            time.sleep(1)
-            menuGramatica()
-
-    #creacion de la gramatica
-    nueva_gramatica = Gramatica(nombre,[],[],"",[],[])
-    
-    #agregando el automata al arreglo
-    gramaticas.append(nueva_gramatica)
 
     print(" ")
     print("-----------Menu Gramatica------------")
@@ -925,7 +976,7 @@ def menuArchivos(repeticion):
                         path_inicial = input ("\nIngrese la ruta del archivo .grm: ")
                 
                 #verificacion del nombre del automata
-                for valor in automatas:
+                for valor in gramaticas:
                     if valor.nombre == division[0]:
                         division[0] = division[0]+"-copia("+repeticion+")"
                         repeticion = repeticion + 1
@@ -956,10 +1007,10 @@ def menuArchivos(repeticion):
                         else:
                             crearTerminalGramatica(nueva_gramatica,derecha[0])
                     else:
-                        if derecha[0].lower() == True:
+                        if derecha[0].lower() == True or derecha[0].isdigit() == True:
                             crearTerminalGramatica(nueva_gramatica,derecha[0])
                             crearNoTerminalGramatica(nueva_gramatica,derecha[1])
-                        elif derecha[1].lower() == True:
+                        elif derecha[1].lower() == True or derecha[1].isdigit() == True:
                             crearTerminalGramatica(nueva_gramatica,derecha[1])
                             crearNoTerminalGramatica(nueva_gramatica,derecha[0])
                     
@@ -1138,9 +1189,63 @@ def menuPrincipal():
         if lectura.isdigit() == True:
             lectura = int(lectura)
             if lectura == 1:
-                menuAFD()
+                print("\nListado de automatas existentes: ",end="\n  ")
+                
+                if len(automatas) == 0:
+                    print("Aun no existen automatas en el sistema\n")
+                else:
+                    for valor in automatas:
+                        print("- "+valor.nombre,end="\n  ")
+
+                #captura del nombre del automata
+                nombre = input("\nEscriba el nombre de un AFD del listado, o un nombre distinto para crear un nuevo AFD: ")
+    
+                automata = None
+
+                #verificacion del nombre del automata
+                for valor in automatas:
+                    if valor.nombre == nombre:
+                        automata = valor
+                        break
+
+                if automata == None:
+                    #creacion del automata
+                    nuevo_automata = Automata(nombre,[],[],"",[])
+    
+                    #agregando el automata al arreglo
+                    automatas.append(nuevo_automata)
+                    menuAFD(nuevo_automata)
+                else:
+                    menuAFD(automata)
             elif lectura == 2:
-                menuGramatica()
+                print("\nListado de gramaticas existentes: ",end="\n  ")
+                
+                if len(gramaticas) == 0:
+                    print("Aun no existen gramaticas en el sistema\n")
+                else:
+                    for valor in gramaticas:
+                        print("- "+valor.nombre,end="\n  ")
+
+                #captura del nombre del automata
+                nombre = input("\nEscriba el nombre de una gramatica del listado, o un nombre distinto para crear una nueva gramatica: ")
+    
+                gramatica = None
+
+                #verificacion del nombre del automata
+                for valor in gramaticas:
+                    if valor.nombre == nombre:
+                        gramatica = valor
+                        break
+
+                if gramatica == None:
+                    #creacion de la gramatica
+                    nueva_gramatica = Gramatica(nombre,[],[],"",[],[])
+    
+                    #agregando el automata al arreglo
+                    gramaticas.append(nueva_gramatica)
+                    menuGramatica(nueva_gramatica)
+                else:
+                    menuGramatica(gramatica)
             elif lectura == 3:
                 menuEvaluarCadenas()
             elif lectura == 4:
