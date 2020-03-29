@@ -1,5 +1,4 @@
 class Evaluacion():
-
     def __init__(self,identificador,cadenas):
         self.identificador = identificador
         self.cadenas = cadenas
